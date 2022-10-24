@@ -1,1 +1,0 @@
-# Quetzal-1 Photos
