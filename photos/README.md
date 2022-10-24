@@ -29,7 +29,7 @@ Then, silence: We did not hear back from Quetzal-1, and were, despite our most a
 Long live Quetzal-1, our great gig in the sky :heart:
 
 ![the-final-picture](./processed/16-UVG-2020-11-17-231626%20(1)%20(Repaired).jpg?raw=true "The final picture taken by Quetzal-1 (processed)")
-**Credit: Universidad del Valle de Guatemala**
+<br>**Credit: Universidad del Valle de Guatemala**
 
 ## File Description
 
