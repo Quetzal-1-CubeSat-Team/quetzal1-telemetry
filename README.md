@@ -38,7 +38,9 @@ Thank you for keeping data open to everyone!
 
 ## How should you cite this repository?
 
-Information to cite this repository and its contents is available in the [CITACION.cff](CITATION.cff) file.
+You may cite this repository as shown below. Further information is available in the [CITATION.cff](CITATION.cff) file.
+
+> Quetzal-1 CubeSat Team. (2022). Quetzal-1 Telemetry [Data set]
 
 All images taken by the Quetzal-1 satellite should be attributed to [Universidad del Valle de Guatemala](https://www.uvg.edu.gt/) and The Quetzal-1 CubeSat Team.
 
