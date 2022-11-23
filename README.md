@@ -34,9 +34,13 @@ Finally, please note that only telemetry was decoded in SatNOGS and made live. A
 
 Our wish is that everyone, from individuals to CubeSat teams around the world, is able to use this data for good, for their own personal, institutional and national growth. We want to make it freely available, while ensuring that you continue to make any derivatives of this content, should there be any, just as free for everyone. Therefore, this repository and its contents are licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) (see [LICENSE](./LICENSE.txt) for more information).
 
-All images taken by the Quetzal-1 satellite should be attributed to [Universidad del Valle de Guatemala](https://www.uvg.edu.gt/) and The Quetzal-1 CubeSat Team.
-
 Thank you for keeping data open to everyone!
+
+## How should you cite this repository?
+
+Information to cite this repository and its contents is available in the [CITACION.cff](CITATION.cff) file.
+
+All images taken by the Quetzal-1 satellite should be attributed to [Universidad del Valle de Guatemala](https://www.uvg.edu.gt/) and The Quetzal-1 CubeSat Team.
 
 ## Available Repositories
 
