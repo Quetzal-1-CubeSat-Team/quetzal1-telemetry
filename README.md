@@ -40,7 +40,7 @@ Thank you for keeping data open to everyone!
 
 You may cite this repository as shown below. Further information is available in the [CITATION.cff](CITATION.cff) file.
 
-> Quetzal-1 CubeSat Team. (2022). Quetzal-1 Telemetry [Data set]
+> Quetzal-1 CubeSat Team. (2022). Quetzal-1 Telemetry [Data set]. https://github.com/Quetzal-1-CubeSat-Team/quetzal1-telemetry
 
 All images taken by the Quetzal-1 satellite should be attributed to [Universidad del Valle de Guatemala](https://www.uvg.edu.gt/) and The Quetzal-1 CubeSat Team.
 
