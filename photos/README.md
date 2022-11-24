@@ -20,7 +20,7 @@ We took three pictures that day. Timing was critical, absolute and unforgiving. 
 
 |||
 |-|-|
-| <img src="./jpg/15-UVG-2020-11-17-231511 (Repaired).jpg"><br>**Credit: Universidad del Valle de Guatemala** | But we knew it was too soon. No need to worry. We knew that real twilight, that sought-after dusk would kick in at 17:15 local time. And so, with hope, with the satellite almost overhead, we sent that second capture-and-downlink command. The transmission came soon after, and what eventually came to be in our monitors (after some quick processing becaused the JPEG header was lost in transmission) was that historic first: the first picture ever taken by a Guatemalan satellite in Earth orbit. At a time when Guatemala and the Central American region was being devastated by Hurricane Iota, Quetzal-1 flew high above, looking at us: an eye above the storm. |
+| <img src="./jpg/15-UVG-2020-11-17-231511 (Repaired).jpg"><br>**Credit: Universidad del Valle de Guatemala** | But we knew it was too soon. No need to worry. We knew that real twilight, that sought-after dusk would kick in at 17:15 local time. And so, with hope, with the satellite almost overhead, we sent that second capture-and-downlink command. The transmission came soon after, and what eventually came to be in our monitors (after some quick processing becaused the JPEG header was lost in transmission) was that historic first: **the first visible picture received on Earth, captured and sent by a Central American satellite in Earth orbit.** At a time when Guatemala and the Central American region was being devastated by Hurricane Iota, Quetzal-1 flew high above, looking at us: an eye above the storm. |
 | <img src="./jpg/16-UVG-2020-11-17-231626 (1) (Original).jpg"><br>**Credit: Universidad del Valle de Guatemala** | As if that wasn't enough, on its last legs, with the satellite over 700 kilometers away, we tried a final capture and download command. Our antenna, its amplifiers maxxed out and listening as intently as it could, received the third and final image that day. More corrupted, given the impressive distance over which it had been transmitted (the final packets came in at over 1,300 km), it gifted us with another perspective: one with less clouds, more water, with the satellite well over the Atlantic at this point. |
 
 We didn't know, at the time, this would become the final image ever taken by Quetzal-1. We attempted to download this last image four days later, on November 21st. Unfortunately for us, and for our strong satellite up above, a communications error ocurred between our Payload module and the On-Board Computer during picture transmission. We received the first 6 packets of the picture, and then a repetition of that last packet, replicated over the length of the picture.
@@ -29,6 +29,7 @@ Then, silence: We did not hear back from Quetzal-1, and were, despite our most a
 
 Long live Quetzal-1, our great gig in the sky :heart:
 
+P.S. *Here is the last picture taken by the satellite on that fateful November 17th, 2020, post-processed for clarity.*
 ![the-final-picture](./processed/16-UVG-2020-11-17-231626%20(1)%20(Repaired).jpg?raw=true "The final picture taken by Quetzal-1 (processed)")
 <br>**Credit: Universidad del Valle de Guatemala**
 
