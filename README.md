@@ -19,7 +19,7 @@ This repository serves as the central location for all data transmitted by the Q
 
 The files are organized as follows:
 
-1. [telemetry](./telemetry/): contains all the telemetry for Quetzal-1. For an explanation of each variable, see [the README](./telemetry/README.md) within this directory.
+1. [telemetry](./telemetry/): contains all the telemetry for Quetzal-1, as well as the raw beacons and the scripts used to decode them. For for information, see [the README](./telemetry/README.md) within this directory.
 2. [photos](./photos/): contains all the photos downloaded from Quetzal-1. For background information on each image, as well as an interesting story on our journey towards photos of the Central American region during Hurricane Iota, see [the README](./photos/README.md) within this directory.
 3. [media](./media/): contains miscellanous images used throughout this repository.
 

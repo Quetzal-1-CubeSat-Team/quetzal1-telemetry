@@ -5,24 +5,32 @@
 # Descripcion: Programa para filtrar telemetria de Quetzal-1 descargada
 #              desde SatNOGS. Este programa elimina beacons localizados
 #              en lugar incorrecto, asi como beacons mal decodificados.
+# Modificado: 2026-10-10 por Dan Alvarez
+# Cambios:     - Se elimina calculo de orbita (TLE, Modulo_Propagator) y
+#                columnas ECEF/ECI/LLA/velocidades, puesto que no se
+#				 cuenta con los TLE actualmente.
+#              - QtCore.QDateTime reemplazado por datetime (misma lógica).
+#              - Salida en CSV en lugar de Excel (.xls).
+#              - Directorios de entrada/salida como argumentos (--input,
+#                --output) y opción --all para procesar las 30 semanas.
+#              - El filtro de paquetes repetidos solo se aplica con
+# 				 --filter. Sin eso, se escriben todos los paquetes que
+# 				 vienen en los archivo HEX.
+#              - Columna frame_index (numero de frame dentro del HEX).
+#              - Se elimina opcion --framelength (HEX files solo
+#                contienen beacons de 137 bytes).
 # ----------------------------------------------------------------------
 
 # Librerias ------------------------------------------------------------
 
 # Local libraries
-from PyQt5 import QtCore, QtGui, QtWidgets
-from datetime import datetime
+from datetime import datetime, timedelta
 import argparse
-import time
+import csv
+import os
 import sys
 
-# Third-party libraries
-import xlwt
-from xlwt import Workbook
-import xlrd
-
 # Own libraries
-from Modulo_Propagator import Orbit_Propagator
 import Modulo_HEX as mh
 
 # ----------------------------- FUNCIONES ------------------------------
@@ -33,7 +41,10 @@ def parse_args():
 	"""
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--week', '-i', help='No. of week to analyze', type=int, default=0)
-	parser.add_argument('--framelength', '-l', help='Amount of bytes per frame', type=int, default=137)
+	parser.add_argument('--all', '-a', help='Process all 30 weeks', action='store_true')
+	parser.add_argument('--input', help='Input HEX file (default: ../raw/beacons_week_N.hex)', default=None)
+	parser.add_argument('--output', '-o', help='Output CSV file (default: ./output/beacons_week_N[_filtered].csv)', default=None)
+	parser.add_argument('--filter', '-f', help='Apply original chronological filter', action='store_true')
 	return parser.parse_args()
 
 def calcular_RTC(rtc_hour, rtc_min, rtc_sec, rtc_day, rtc_month, rtc_year):
@@ -97,7 +108,7 @@ def calcular_UTC(rtc_hour, rtc_min, rtc_sec, rtc_day, rtc_month, rtc_year, skew_
 							rtc_month, rtc_year)
 
 	# Inicializar fecha de lanzamiento
-	launch_date = QtCore.QDateTime(2020,4,28,15,20,18)				    # Fecha y hora de lanzamiento 15:20:18 - 28/04/2020 UTC
+	launch_date = datetime(2020,4,28,15,20,18)						    # Fecha y hora de lanzamiento 15:20:18 - 28/04/2020 UTC
 	date_time = launch_date
 	month_days = [31,31,29,31,30,31,30,31,31,30,31,30]
 
@@ -112,168 +123,140 @@ def calcular_UTC(rtc_hour, rtc_min, rtc_sec, rtc_day, rtc_month, rtc_year, skew_
 
 	# Agregar tiempo transcurrido en RTC para calcular UTC a partir
 	# de hora de lanzamiento
-	date_time = date_time.addDays(days_to_add)
-	date_time = date_time.addSecs(secs_to_add)
+	date_time = date_time + timedelta(days=days_to_add)
+	date_time = date_time + timedelta(seconds=secs_to_add)
 
 	# Corrector de timestamps para eliminar error de RTC de
 	# satelite y obtener real-time UTC
 	if (skew_corrector):
-		dS = launch_date.secsTo(date_time)							    # Determinar cantidad de segundos desde lanzamiento y UTC timestamp
+		dS = int((date_time - launch_date).total_seconds())			    # Determinar cantidad de segundos desde lanzamiento y UTC timestamp
 		real_seconds = round(dS * skew_coeff,0)             			# Realizar correccion de segundos para eliminar adelanto de Nanomind 3200
-		date_time = launch_date.addSecs(real_seconds)				    # Generar fecha corregida
+		date_time = launch_date + timedelta(seconds=real_seconds)	    # Generar fecha corregida
 
-	utc_date = date_time.toString("hh:mm:ss - dd/MM/yyyy")
+	utc_date = date_time.strftime("%H:%M:%S - %d/%m/%Y")
 	return date_time, utc_date
+
+def procesar_semana(week_no, file_hex, file_out, filtrar):
+	"""
+	Funcion para decodificar (y opcionalmente filtrar) los beacons de
+	un HEX file y escribirlos en un archivo CSV
+
+	Parametros
+	----------
+	week_no : int
+		No. de semana a analizar
+	file_hex : str
+		Ruta de HEX file de entrada
+	file_out : str
+		Ruta de archivo CSV de salida
+	filtrar : bool
+		Bandera para aplicar filtro de orden cronologico
+	"""
+
+	# -------------------- DECODIFICADOR DE TELEMETRIA ---------------------
+
+	# Decodificar telemetria demodulada y almacenada en archivo HEX
+	hex_list = mh.HEX_select(file_hex)
+	beacon_amount = len(hex_list)/beacon_length
+
+	# --------------------------- GENERADO DE CSV ---------------------------
+
+	# Inicializar archivo CSV para guardar datos ---------------------------
+	print("Executing beacon decoding" + (" and filtering" if filtrar else "") + " (week " + str(week_no) + ").....")
+	out_dir = os.path.dirname(file_out)
+	if (out_dir != ''):
+		os.makedirs(out_dir, exist_ok=True)
+	fp = open(file_out, 'w', newline='')
+	sheet = csv.writer(fp)
+	headers = ['frame_index','UTC_Timestamp',\
+		 'hora', 'minuto', 'segundo', 'dia', 'mes', 'year', 'ADM_status', 'EPS_status', \
+		 'HEATER_status', 'ADCS_status', 'PAYLOAD_status', 'ADM_resetS', \
+		 'EPS_resetS', 'ADCS_resetS', 'ADCS_resetH', 'COMMS_resetH', 'CDHS_reset',\
+		 'EPS_temperature', 'state_charge', 'battery_voltage', 'average_current',\
+		 'remaining_capacity', 'average_power', 'state_health', 'CH1_voltage', \
+		 'CH1_current', 'CH2_voltage', 'CH2_current', 'CH3_voltage', 'CH3_current',\
+		 'ADCS_current', 'COMMS_current', 'PAYLOAD_current', 'HEATER_current',\
+		 'fault_flags', 'communication_flags', 'transmission_flags_EPS',\
+		 'gyro_X', 'gyro_Y', 'gyro_Z', 'mag_X', 'mag_Y', 'mag_Z', 'ADC1_CH1', 'ADC1_CH2',\
+		 'ADC1_CH3', 'ADC1_CH4', 'ADC1_CH5', 'ADC1_CH6', 'ADC2_CH1', 'ADC2_CH2',\
+		 'ADC2_CH3', 'ADC2_CH4', 'ADC2_CH5', 'ADC2_CH6', 'BNO055_temperature',\
+		 'ADCS_temperature1', 'transmission_flags_ADCS',\
+		 'package_counter', 'camera_mode', 'picture_counter', 'CDHS_CYCLE_TIME',\
+		 'CDHS_WDT', 'ADM_SOC_LIMIT', 'ADCS_SOC_LIMIT', 'COMMS_SOC_LIMIT', \
+		 'PLD_SOC_LIMIT', 'HEATER_CYCLE_TIME', 'HEATER_EMON_TIME', 'HEATER_EMOFF_TIME', \
+		 'ADM_CYCLE_TIME', 'ADM_BURN_TIME', 'ADM_MAX_CYCLES', 'ADM_WAIT_TIME1',\
+		 'ADM_WAIT_TIME2', 'ADM_ENABLE', 'COMMS_CYCLE_TIME', 'PLD_CYCLE_TIME',\
+		 'PLD_OP_MODE', 'CAM_RESOLUTION', 'CAM_EXPOSURE', 'CAM_SAVE_TIME', 'PLD_ENABLE']
+
+	# Ejecutar escritura de headers en CSV
+	sheet.writerow(headers)
+
+	# Ejecucion continua para lectura de todo beacon en el HEX file
+	i = 0
+	nrow = 0
+	beacon_index = 0
+	last_date = datetime(2000,1,1,0,0,0)
+	max_date = datetime(2030,1,1,0,0,0)
+	while (i < int(beacon_amount)):
+
+		# Decodificar beacons
+		_, beacon_data, _ = mh.beacon_decode(hex_list, beacon_index, nrow, False)
+
+		# Calcular UTC Timestamp
+		date, timestamp = calcular_UTC(beacon_data[0], beacon_data[1],
+									   beacon_data[2], beacon_data[3],
+									   beacon_data[4], beacon_data[5],
+									   skew_coeff=skew_coeff)
+
+		# Eliminar beacons en mal orden cronologico o mal decodificados
+		# (solo si se selecciono --filter)
+		if (not filtrar or (date > last_date and date < max_date)):
+			sheet.writerow([i, timestamp] + list(beacon_data))			# Escribir linea de cada beacon en CSV
+			last_date = date
+			nrow += 1
+
+		# Movimiento de lectura de beacon a travez de HEX
+		beacon_index = beacon_index + beacon_length
+		i += 1
+
+	# Guardar archivo
+	fp.close()
+	print("Beacon decoding completed: " + str(nrow) + " of " + str(int(beacon_amount)) + " frames written to " + file_out)
+	return nrow
 
 # ***************************** EJECUCION ******************************
 
 # Extraer parametros de command line -----------------------------------
-week_no = parse_args().week
-beacon_length = parse_args().framelength
+args = parse_args()
+week_no = args.week
 
 # Configuracion de variables globales
 skew_coeff = 0.999939265156109											# Ultima calibracion 2020-10-06 02:00:00 UTC (Desfase de 60.735us)
+beacon_length = 137														# Bytes por beacon en HEX files (sin headers AX.25/CSP)
 
 # Proteccion de programa
-if (week_no == 0):
+if (week_no == 0 and not args.all):
 	print("No week was selected. Exiting program...")
 	sys.exit(0)
 
-beacon_lengths = [137, 141, 157, 207]
-header_lengths = [0, 4, 20, 70]
-if (beacon_length not in beacon_lengths):
-	print("Incorrect frame length selected. Exiting program...")
-	sys.exit(0)
-else:
-	idx = beacon_lengths.index(beacon_length)
-	beacon_header_length = header_lengths[idx]
-
 # Inicializado de archivos
-file_hex = 'C://Users//Aldo//OneDrive - Universidad del Valle de Guatemala//Quetzal-1 Data//Raw Beacons (Weekly)//beacons_week_' + str(week_no) + '.hex'
-file_tle = 'C://Users//Aldo//OneDrive - Universidad del Valle de Guatemala//Quetzal-1 Data//TLE Set (Weekly)//tle_week_' + str(week_no) + '.txt'
-file_out = 'C://Users//Aldo//OneDrive - Universidad del Valle de Guatemala//Quetzal-1 Data//Parsed Beacons (Weekly)//beacons_week_' + str(week_no) + '.xls'
+script_dir = os.path.dirname(os.path.abspath(__file__))
+weeks = list(range(1, 31)) if args.all else [week_no]
+if (len(weeks) > 1 and (args.input is not None or args.output is not None)):
+	print("--input/--output can only be used with a single week. Exiting program...")
+	sys.exit(0)
 
-# -------------------- DECODIFICADOR DE TELEMETRIA ---------------------
+total_rows = 0
+for week_no in weeks:
+	file_hex = args.input
+	if (file_hex is None):
+		file_hex = os.path.join(script_dir, '..', 'raw', 'beacons_week_' + str(week_no) + '.hex')
+	file_out = args.output
+	if (file_out is None):
+		suffix = '_filtered' if args.filter else ''
+		file_out = os.path.join(script_dir, 'output', 'beacons_week_' + str(week_no) + suffix + '.csv')
+	total_rows += procesar_semana(week_no, file_hex, file_out, args.filter)
 
-# Decodificar telemetria demodulada y almacenada en archivo HEX
-hex_list = mh.HEX_select(file_hex)
-beacon_amount = len(hex_list)/beacon_length
-beacon_counter = beacon_header_length
-
-# ------------------------ PROPAGADOR DE ORBITA ------------------------
-
-# Leer datos de TLE de semana
-weekly_tle = ['QUETZAL-1']
-with open(file_tle, 'r') as fp:
-	for line in fp.readlines():
-		weekly_tle.append(line)
-		if (len(weekly_tle) == 3):
-			break
-TLE_LINES = (weekly_tle[1].strip(),weekly_tle[2].strip())
-
-# Inicializacion de propagador de orbita
-propagator = Orbit_Propagator(TLE_LINES,skew_coeff)
-
-# ------------------------- GENERADO DE EXCEL --------------------------
-
-# Inicializar archivo de Excel para guardar datos ----------------------
-print("Executing beacon decoding and filtering.....")
-wb = Workbook()
-sheet = wb.add_sheet('Logger')
-headers = ['UTC_Timestamp','x_ecef','y_ecef','z_ecef','x_eci','y_eci','z_eci',\
-     'longitude','latitude','altitude','vx_eci','vy_eci','vz_eci',\
-	 'hora', 'minuto', 'segundo', 'dia', 'mes', 'year', 'ADM_status', 'EPS_status', \
-	 'HEATER_status', 'ADCS_status', 'PAYLOAD_status', 'ADM_resetS', \
-	 'EPS_resetS', 'ADCS_resetS', 'ADCS_resetH', 'COMMS_resetH', 'CDHS_reset',\
-	 'EPS_temperature', 'state_charge', 'battery_voltage', 'average_current',\
-	 'remaining_capacity', 'average_power', 'state_health', 'CH1_voltage', \
-	 'CH1_current', 'CH2_voltage', 'CH2_current', 'CH3_voltage', 'CH3_current',\
-	 'ADCS_current', 'COMMS_current', 'PAYLOAD_current', 'HEATER_current',\
-	 'fault_flags', 'communication_flags', 'transmission_flags_EPS',\
-	 'gyro_X', 'gyro_Y', 'gyro_Z', 'mag_X', 'mag_Y', 'mag_Z', 'ADC1_CH1', 'ADC1_CH2',\
-	 'ADC1_CH3', 'ADC1_CH4', 'ADC1_CH5', 'ADC1_CH6', 'ADC2_CH1', 'ADC2_CH2',\
-	 'ADC2_CH3', 'ADC2_CH4', 'ADC2_CH5', 'ADC2_CH6', 'BNO055_temperature',\
-	 'ADCS_temperature1', 'transmission_flags_ADCS',\
-	 'package_counter', 'camera_mode', 'picture_counter', 'CDHS_CYCLE_TIME',\
-	 'CDHS_WDT', 'ADM_SOC_LIMIT', 'ADCS_SOC_LIMIT', 'COMMS_SOC_LIMIT', \
-	 'PLD_SOC_LIMIT', 'HEATER_CYCLE_TIME', 'HEATER_EMON_TIME', 'HEATER_EMOFF_TIME', \
-	 'ADM_CYCLE_TIME', 'ADM_BURN_TIME', 'ADM_MAX_CYCLES', 'ADM_WAIT_TIME1',\
-	 'ADM_WAIT_TIME2', 'ADM_ENABLE', 'COMMS_CYCLE_TIME', 'PLD_CYCLE_TIME',\
-	 'PLD_OP_MODE', 'CAM_RESOLUTION', 'CAM_EXPOSURE', 'CAM_SAVE_TIME', 'PLD_ENABLE']
-
-# Ejecutar escritura de headers en Excel
-for x in range(0, len(headers)):
-	sheet.write(0, x, headers[x])
-
-# Ejecucion continua para lectura de todo beacon en el HEX file
-i = 0
-nrow = 0
-listados_utc = []
-beacon_index = beacon_header_length
-last_date = QtCore.QDateTime(2000,1,1,0,0,0)
-max_date = QtCore.QDateTime(2030,1,1,0,0,0)
-while (i < int(beacon_amount)):
-
-	# Decodificar beacons
-	_, beacon_data, _ = mh.beacon_decode(hex_list, beacon_index, nrow, False)
-
-	# Calcular UTC Timestamp
-	date, timestamp = calcular_UTC(beacon_data[0], beacon_data[1],
-								   beacon_data[2], beacon_data[3],
-								   beacon_data[4], beacon_data[5],
-								   skew_coeff=skew_coeff)
-
-	# Eliminar beacons en mal orden cronologico o mal decodificados
-	if (last_date.secsTo(date) > 0 and date.daysTo(max_date) > 0):
-		listados_utc.append(timestamp)									# Agregar timestamp a listado a utilizar para propagador de orbita
-		sheet.write(nrow + 1, 0, timestamp)                             # Escribir timestamp de beacon en Excel
-		for x in range(0, len(headers) - 13):
-			sheet.write(nrow + 1, x + 13, beacon_data[x])               # Escribir linea de cada beacon en Excel
-		last_date = date
-		nrow += 1
-
-	# Movimiento de lectura de beacon a travez de HEX
-	beacon_index = beacon_index + beacon_length
-	i += 1
-print("Beacon decoding and filtering completed.")
-
-# Obtener localizacion y velocidad Earth-centered Earth-fixed (ECEF) de
-# satelite durante transmision de cada beacon
-print("Calculating satellite ECEF coordinates......")
-x_ecef, y_ecef, z_ecef, v_ecef = propagator.obtener_estados_ECEF(listados_utc)
-v_ecef = [i for i in zip(*v_ecef)]	                                    # Trasponer matriz de velocidades
-
-# Conversion de coordenadas ECEF a formato Earth-centered Inertial Frame
-# (ECI)
-print("Calculating satellite ECI coordinates.......")
-x_eci, y_eci, z_eci = propagator.conversion_ECEF_ECI(x_ecef, y_ecef, z_ecef, listados_utc)
-
-# Conversion de velocidad ECEF a formato ECI
-print("Calculating satellite ECI velocity.......")
-vx_eci, vy_eci, vz_eci = propagator.conversion_ECEF_ECI(v_ecef[0], v_ecef[1], v_ecef[2], listados_utc)
-
-# Conversion de coordenadas ECEF a formato Longitude-Latitude-Altitude
-# (LLA)
-print("Calculating satellite LLA coordinates.......")
-longitudes, latitudes, altitudes = propagator.conversion_ECEF_LLA(x_ecef, y_ecef, z_ecef, radians=False)
-
-# Ejecutar escritura de coordenadas ECEF, ECI, LLA en Excel
-for j in range(0, len(x_ecef)):
-	sheet.write(j + 1, 1, x_ecef[j])
-	sheet.write(j + 1, 2, y_ecef[j])
-	sheet.write(j + 1, 3, z_ecef[j])
-	sheet.write(j + 1, 4, x_eci[j])
-	sheet.write(j + 1, 5, y_eci[j])
-	sheet.write(j + 1, 6, z_eci[j])
-	sheet.write(j + 1, 7, longitudes[j])
-	sheet.write(j + 1, 8, latitudes[j])
-	sheet.write(j + 1, 9, altitudes[j])
-	sheet.write(j + 1, 10, vx_eci[j])
-	sheet.write(j + 1, 11, vy_eci[j])
-	sheet.write(j + 1, 12, vz_eci[j])
-
-# Guardar archivo
-wb.save(file_out)
-print("Telemetry processing completed!")
+print("Telemetry processing completed! Total rows: " + str(total_rows))
 
 # ----------------------------------------------------------------------

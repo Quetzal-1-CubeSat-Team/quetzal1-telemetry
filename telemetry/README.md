@@ -10,6 +10,13 @@ For science, and novice CubeSat teams, this is invaluable! Are you looking for a
 
 The [telemetry](./telemetry.xlsx) file is a compilation of all the data received for the satellite, by our own Ground Station in Guatemala, as well as dozens of others around the globe. A description of each column in the dataset is provided in [the variable description](./variable_description.xlsx).
 
+## Raw data and processing scripts
+
+The raw beacons from which [telemetry.xlsx](./telemetry.xlsx) was generated are available too:
+
+1. [raw](./raw/): the raw beacons received through SatNOGS, one binary file per week of operation. See [the README](./raw/README.md) for a description of the format.
+2. [scripts](./scripts/): the scripts that decode the raw beacons into CSV files. See [the README](./scripts/README.md) for usage.
+
 ---
 :information_source: This directory contains the variable description for the decoded data. Further information on the codec for the satellite's beacons can be found in the [gr-quetzal1](https://github.com/danalvarez/gr-quetzal1#uhf-specifications) repository.
 
